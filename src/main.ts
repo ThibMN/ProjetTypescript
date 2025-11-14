@@ -1,10 +1,10 @@
 // Réalisé par Thibaud
 
 import { Author, demoAuthors } from "./author";
-import { Book, demoBooks, BookCategory, isValidCategory } from "./book";
-import { demoStudents, demoUsers, Librarian, Student, User } from "./user";
+import { Book, BookCategory, demoBooks, isValidCategory } from "./book";
+import { Librarian, Student, User, demoStudents, demoUsers } from "./user";
 import { getActiveLoans, getLoansByStudent } from "./loan";
-import { Library, demoLibrary } from "./library";
+import { Library, createDemoLibrary } from "./library";
 import { Repository } from "./repository";
 
 const displayUsers = (users: User[]): void => {
@@ -41,8 +41,9 @@ const demoLibraryFlow = (library: Library): void => {
   const availableBook = library.listAvailable().find((book) => book.available);
   if (availableBook) {
     const loan = library.borrowBook(availableBook.id, borrower);
-    console.log(`\n${borrower.getFullName()} emprunte ${availableBook.title}`);
-    console.log("Pret cree:", loan);
+    console.log(
+      `\n${borrower.getFullName()} emprunte ${availableBook.title} (retour prevu le ${loan.dueDate.toDateString()})`
+    );
 
     const activeLoans = getActiveLoans(library.getLoans());
     console.log("Emprunts actifs:", activeLoans.map((l) => l.book.title));
@@ -56,9 +57,58 @@ const demoLibraryFlow = (library: Library): void => {
     `Pret(s) pour ${borrower.getFullName()} :`,
     studentLoans.map((loan) => ({
       livre: loan.book.title,
-      statut: loan.status
+      statut: loan.status,
+      due: loan.dueDate.toDateString()
     }))
   );
+};
+
+const demoReservationFlow = (library: Library): void => {
+  const borrower = demoStudents[0];
+  const reserver = demoStudents[1];
+  const targetBookId = 101;
+  const targetBook = library.findBookById(targetBookId);
+  if (!targetBook) {
+    return;
+  }
+
+  if (targetBook.available) {
+    library.borrowBook(targetBookId, borrower);
+  }
+
+  library.reserveBook(targetBookId, reserver);
+  console.log(
+    `\n${reserver.getFullName()} se place en file d'attente pour ${targetBook.title}`
+  );
+  console.log(
+    "File actuelle:",
+    library.getReservations(targetBookId).map((res) => res.student.getFullName())
+  );
+
+  library.returnBook(targetBookId);
+  const newLoan = library
+    .getLoans()
+    .find((loan) => loan.book.id === targetBookId && loan.status === "ongoing");
+  if (newLoan) {
+    console.log(
+      `${newLoan.student.getFullName()} recoit automatiquement ${newLoan.book.title}`
+    );
+  }
+};
+
+const showOverdueAndPenalties = (library: Library): void => {
+  const referenceDate = new Date("2025-03-01");
+  const penalties = library.getPenalties(referenceDate);
+  if (penalties.length === 0) {
+    console.log("\nAucun retard detecte.");
+    return;
+  }
+  console.log("\nEmprunts en retard (reference 1er mars 2025):");
+  penalties.forEach(({ loan, penalty, lateDays }) => {
+    console.log(
+      `- ${loan.book.title} (${loan.student.getFullName()}, ${lateDays} jour(s) de retard) : ${penalty}€`
+    );
+  });
 };
 
 const demoRepositories = (): void => {
@@ -75,8 +125,14 @@ const demoRepositories = (): void => {
 const runDemo = (): void => {
   console.log("=== Prototype de Bibliotheque TypeScript ===");
   displayUsers(demoUsers);
-  demoLibraryFlow(new Library(demoBooks, demoLibrary.getLoans()));
+
+  const library = createDemoLibrary();
+  demoLibraryFlow(library);
+  demoReservationFlow(library);
+  showOverdueAndPenalties(library);
   demoRepositories();
+
+  console.log("\nPour tester le menu interactif: npm run menu");
 };
 
 runDemo();
