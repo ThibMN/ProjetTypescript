@@ -160,6 +160,20 @@ export class Library {
     }));
   }
 
+  getBookStatuses(): Array<{
+    book: Book;
+    currentLoan?: Loan;
+    reservations: Reservation[];
+  }> {
+    return this.books.map((book) => ({
+      book,
+      currentLoan: this.loans.find(
+        (loan) => loan.book.id === book.id && loan.status === "ongoing"
+      ),
+      reservations: [...(this.reservations.get(book.id) ?? [])]
+    }));
+  }
+
   private fulfillReservation(bookId: number): Loan | undefined {
     const queue = this.reservations.get(bookId);
     if (!queue || queue.length === 0) {

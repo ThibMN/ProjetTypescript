@@ -37,6 +37,27 @@ const listAvailable = (): void => {
   titles.forEach((title) => console.log(`- ${title}`));
 };
 
+const listAllBooks = (): void => {
+  const statuses = library.getBookStatuses();
+  if (statuses.length === 0) {
+    console.log("Aucun livre enregistre.");
+    return;
+  }
+
+  console.log("Etat complet du catalogue:");
+  statuses.forEach(({ book, currentLoan, reservations }) => {
+    const borrower = currentLoan ? currentLoan.student.getFullName() : "Personne";
+    const reservationList =
+      reservations.length > 0
+        ? reservations.map((res) => res.student.getFullName()).join(", ")
+        : "Personne";
+    console.log(`- ${book.id} - ${book.title}`);
+    console.log(`  Disponible: ${book.available ? "Oui" : "Non"}`);
+    console.log(`  Emprunte par: ${borrower}`);
+    console.log(`  Reservations: ${reservationList}`);
+  });
+};
+
 const borrowFlow = async (): Promise<void> => {
   const student = await selectStudent();
   if (!student) {
@@ -112,12 +133,13 @@ const menuLoop = async (): Promise<void> => {
     console.log(`
 === Menu Bibliotheque ===
 1. Lister les livres disponibles
-2. Emprunter un livre
-3. Retourner un livre
-4. Reserver un livre
-5. Voir les reservations
-6. Voir les retards et penalites
-7. Quitter
+2. Lister tous les livres
+3. Emprunter un livre
+4. Retourner un livre
+5. Reserver un livre
+6. Voir les reservations
+7. Voir les retards et penalites
+8. Quitter
 `);
     const choice = await question("Votre choix: ");
     switch (choice.trim()) {
@@ -125,21 +147,24 @@ const menuLoop = async (): Promise<void> => {
         listAvailable();
         break;
       case "2":
-        await borrowFlow();
+        listAllBooks();
         break;
       case "3":
-        await returnFlow();
+        await borrowFlow();
         break;
       case "4":
-        await reserveFlow();
+        await returnFlow();
         break;
       case "5":
-        showReservations();
+        await reserveFlow();
         break;
       case "6":
-        showPenalties();
+        showReservations();
         break;
       case "7":
+        showPenalties();
+        break;
+      case "8":
         console.log("Au revoir !");
         rl.close();
         return;
