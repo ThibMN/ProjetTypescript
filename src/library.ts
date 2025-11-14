@@ -27,3 +27,51 @@ export class Library {
   findBookById(id: number): Book | undefined {
     return this.books.find((book) => book.id === id);
   }
+
+  
+  getLoans(): Loan[] {
+    return [...this.loans];
+  }
+
+  borrowBook(bookId: number, student: Student): Loan {
+    const book = this.findBookById(bookId);
+    if (!book) {
+      throw new Error(`Livre ${bookId} introuvable`);
+    }
+    if (!book.available) {
+      throw new Error(`Livre ${bookId} deja emprunte`);
+    }
+    if (hasReachedLoanLimit(this.loans, student)) {
+      throw new Error(`Limite de ${student.getFullName()} atteinte`);
+    }
+
+    const newLoan: Loan = {
+      book,
+      student,
+      date: new Date(),
+      status: "ongoing"
+    };
+
+    book.available = false;
+    this.loans.push(newLoan);
+    return newLoan;
+  }
+
+  returnBook(bookId: number): Loan | undefined {
+    const loan = this.loans.find(
+      (item) => item.book.id === bookId && item.status === "ongoing"
+    );
+    if (!loan) {
+      return undefined;
+    }
+
+    loan.status = "returned";
+    const book = this.findBookById(bookId);
+    if (book) {
+      book.available = true;
+    }
+    return loan;
+  }
+}
+
+export const demoLibrary = new Library(demoBooks, demoLoans);
